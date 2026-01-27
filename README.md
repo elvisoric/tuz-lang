@@ -1,6 +1,6 @@
-# tuz - A Systems Programming Language
+# tuz - A Toy Programming Lanugage 
 
-tuz is a systems programming language built with LLVM, designed to be simple yet expressive, with syntax inspired by Rust and C.
+tuz is a toy programming language built with LLVM and Kimi, designed to be simple yet expressive, with syntax inspired by Rust and C.
 
 ## Features
 

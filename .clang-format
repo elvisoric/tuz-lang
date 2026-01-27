@@ -1,0 +1,36 @@
+# .clang-format
+# Start from LLVM and apply a few common project-friendly overrides.
+BasedOnStyle: LLVM
+
+# --- Indentation & columns ---
+IndentWidth: 2
+TabWidth: 8
+UseTab: Never
+ColumnLimit: 100
+
+# --- Braces & wrapping ---
+BreakBeforeBraces: Attach
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: InlineOnly
+
+# --- Aligning ---
+AlignAfterOpenBracket: Align
+AlignOperands: Align
+AlignTrailingComments: true
+
+# --- Pointers & references ---
+PointerAlignment: Left
+ReferenceAlignment: Pointer
+
+# --- Includes ---
+SortIncludes: true
+IncludeBlocks: Regroup
+
+# --- Misc ---
+DerivePointerAlignment: false
+ReflowComments: true
+SpacesInParentheses: false
+SpaceAfterCStyleCast: false
+Cpp11BracedListStyle: true
+

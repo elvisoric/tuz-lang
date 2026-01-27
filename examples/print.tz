@@ -1,0 +1,14 @@
+// Printing example in tuz
+// Shows how to use extern to call C library functions
+
+// Declare external C function
+extern fn puts(s: *u8) -> i32;
+
+fn main() -> i32 {
+    // Print messages using puts
+    puts("Hello from tuz!");
+    puts("This is a systems programming language");
+    puts("Built with LLVM!");
+    
+    return 0;
+}

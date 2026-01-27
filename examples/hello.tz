@@ -1,0 +1,26 @@
+// Hello World in Forge
+// A simple program demonstrating basic functionality
+
+fn main() -> int {
+    // Calculate factorial of 5
+    let result = factorial(5);
+    
+    // Simple arithmetic
+    let x = 10;
+    let y = 20;
+    let sum = x + y;
+    
+    // Conditional
+    if sum > 25 {
+        return sum;
+    } else {
+        return 0;
+    }
+}
+
+fn factorial(n: int) -> int {
+    if n <= 1 {
+        return 1;
+    }
+    return n * factorial(n - 1);
+}

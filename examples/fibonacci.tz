@@ -1,0 +1,39 @@
+// Fibonacci sequence in Forge
+
+fn main() -> int {
+    // Calculate and return the 10th Fibonacci number
+    return fib(10);
+}
+
+fn fib(n: int) -> int {
+    if n <= 0 {
+        return 0;
+    }
+    if n == 1 {
+        return 1;
+    }
+    return fib(n - 1) + fib(n - 2);
+}
+
+// Iterative version for better performance
+fn fib_iter(n: int) -> int {
+    if n <= 0 {
+        return 0;
+    }
+    if n == 1 {
+        return 1;
+    }
+    
+    let a = 0;
+    let b = 1;
+    let i = 2;
+    
+    while i <= n {
+        let temp = a + b;
+        a = b;
+        b = temp;
+        i = i + 1;
+    }
+    
+    return b;
+}

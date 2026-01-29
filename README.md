@@ -43,7 +43,7 @@ sudo make install
 
 ```bash
 # Install LLVM
-sudo apt-get install llvm-dev libllvm-ocaml-dev
+sudo apt-get install llvm-dev
 
 # Build
 mkdir build && cd build

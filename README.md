@@ -137,7 +137,7 @@ fn main() -> int {
     }
     
     // For loop (range-based)
-    let sum = 0;
+    let mut sum = 0;
     for i = 0, 10 {
         sum = sum + i;
     }

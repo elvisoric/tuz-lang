@@ -12,8 +12,13 @@
 namespace tuz {
 
 class Resolver : public ASTVisitorDelux {
+private:  
+  
+  std::unordered_map<std::string, TypePtr> types;
+
 public:
   Program& program;
+  
 
   explicit Resolver(Program& program) : program(program) {}
 

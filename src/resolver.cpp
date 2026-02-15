@@ -6,6 +6,39 @@ namespace tuz {
 
 void Resolver::resolve() {
   std::cout << "Resolving symbols " << std::endl;
+
+  // Create emtpy struct type entry 
+  for (auto& decl : program.declarations) {
+    if (decl->kind == DeclKind::Struct) {
+      auto* struct_decl = static_cast<StructDecl*>(decl.get());
+
+      auto struct_type = std::make_shared<StructType>(
+        struct_decl->name,
+        std::vector<std::pair<std::string, TypePtr>>{}
+      );
+
+      types[struct_decl->name] = struct_type;
+    }
+  }
+
+  for (auto& decl : program.declarations) {
+      if (decl->kind == DeclKind::Struct) {
+
+          auto* struct_decl = static_cast<StructDecl*>(decl.get());
+
+          auto struct_type = std::static_pointer_cast<StructType>(
+              types[struct_decl->name]
+          );
+
+          for (auto& field : struct_decl->fields) {
+              auto resolved = resolve_type(field.type);
+              struct_type->fields.emplace_back(field.name, resolved);
+          }
+      }
+  }  
+
+
+
   for (auto& decl : program.declarations) {
     visit_decl(*this, *decl);
   }
@@ -122,7 +155,40 @@ void Resolver::visit(GlobalDecl& decl) {
 
 TypePtr Resolver::resolve_type(TypePtr type) {
 
-  std::cout << "Resolving type for " << type->to_string() << std::endl;
+  if (type->kind == TypeKind::TypeName) {
+
+    auto* ref = static_cast<TypeName*>(type.get());
+
+    if (ref->resolved_type)
+      return ref->resolved_type;    
+
+    auto it = types.find(ref->type_name);
+
+    if (it == types.end()) {
+      throw std::runtime_error(
+          "Failed to resolve type: " + ref->type_name
+      );
+    }
+    
+    ref->resolved_type = it->second;
+    auto resolved = static_cast<StructType*>(it->second.get());
+
+    if (resolved) {
+      std::cout << "Type " 
+                << resolved->name
+                << " resolved: fields=" 
+                << resolved->fields.size()
+                << ", size=" 
+                << resolved->size()
+                << ", alignment=" 
+                << resolved->alignment()
+                << std::endl;
+    }
+
+
+    return ref->resolved_type;
+  }
+
 
   return type;
 }

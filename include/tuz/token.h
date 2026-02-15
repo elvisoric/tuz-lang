@@ -110,6 +110,8 @@ struct Token {
   template <typename... Ts> bool is_one_of(TokenType t1, TokenType t2, Ts... ts) const {
     return is(t1) || is_one_of(t2, ts...);
   }
+
+  Location location() { return { line, column }; }
 };
 
 struct TokenDefinition {

@@ -42,9 +42,8 @@ DeclPtr Parser::parse_declaration() {
 // =============================================================================
 
 DeclPtr Parser::parse_extern_decl() {
-  uint32_t line = previous().line;
-  uint32_t col = previous().column;
-
+  auto loc = previous().location();
+  
   expect(TokenType::FN, "Expected 'fn' after 'extern'");
 
   Token& name_token = expect(TokenType::IDENTIFIER, "Expected function name");
@@ -61,14 +60,12 @@ DeclPtr Parser::parse_extern_decl() {
 
   expect(TokenType::SEMICOLON, "Expected ';' after extern function declaration");
 
-  return std::make_shared<FunctionDecl>(name, std::move(params), return_type, nullptr, true, line,
-                                        col);
+  return std::make_shared<FunctionDecl>(name, std::move(params), return_type, nullptr, true, loc);
 }
 
 DeclPtr Parser::parse_function_decl() {
-  uint32_t line = previous().line;
-  uint32_t col = previous().column;
-
+  auto loc = previous().location();
+  
   Token& name_token = expect(TokenType::IDENTIFIER, "Expected function name");
   std::string name(name_token.text);
 
@@ -93,13 +90,12 @@ DeclPtr Parser::parse_function_decl() {
   }
 
   return std::make_shared<FunctionDecl>(name, std::move(params), return_type, std::move(body),
-                                        is_extern, line, col);
+                                        is_extern, loc);
 }
 
 DeclPtr Parser::parse_struct_decl() {
-  uint32_t line = previous().line;
-  uint32_t col = previous().column;
-
+  auto loc = previous().location();
+  
   Token& name_token = expect(TokenType::IDENTIFIER, "Expected struct name");
   std::string name(name_token.text);
 
@@ -107,13 +103,12 @@ DeclPtr Parser::parse_struct_decl() {
   std::vector<Field> fields = parse_field_list();
   expect(TokenType::RBRACE, "Expected '}' after struct fields");
 
-  return std::make_shared<StructDecl>(name, std::move(fields), line, col);
+  return std::make_shared<StructDecl>(name, std::move(fields), loc);
 }
 
 DeclPtr Parser::parse_global_decl() {
-  uint32_t line = previous().line;
-  uint32_t col = previous().column;
-
+  auto loc = previous().location();
+  
   bool is_mutable = match(TokenType::MUT);
 
   Token& name_token = expect(TokenType::IDENTIFIER, "Expected variable name");
@@ -131,7 +126,7 @@ DeclPtr Parser::parse_global_decl() {
 
   expect(TokenType::SEMICOLON, "Expected ';' after global declaration");
 
-  return std::make_shared<GlobalDecl>(name, type, std::move(initializer), is_mutable, line, col);
+  return std::make_shared<GlobalDecl>(name, type, std::move(initializer), is_mutable, loc);
 }
 
 // =============================================================================
@@ -162,9 +157,8 @@ StmtPtr Parser::parse_statement() {
 }
 
 StmtPtr Parser::parse_block_stmt() {
-  uint32_t line = previous().line;
-  uint32_t col = previous().column;
-
+  auto loc = previous().location();
+  
   // If we didn't consume the '{' in match, consume it now
   if (previous().type != TokenType::LBRACE) {
     expect(TokenType::LBRACE, "Expected '{'");
@@ -177,12 +171,11 @@ StmtPtr Parser::parse_block_stmt() {
 
   expect(TokenType::RBRACE, "Expected '}' after block");
 
-  return std::make_shared<BlockStmt>(std::move(statements), line, col);
+  return std::make_shared<BlockStmt>(std::move(statements), loc);
 }
 
 StmtPtr Parser::parse_let_stmt() {
-  uint32_t line = previous().line;
-  uint32_t col = previous().column;
+  auto loc = previous().location();
 
   bool is_mutable = match(TokenType::MUT);
 
@@ -201,28 +194,26 @@ StmtPtr Parser::parse_let_stmt() {
 
   expect(TokenType::SEMICOLON, "Expected ';' after let statement");
 
-  return std::make_shared<LetStmt>(name, type, std::move(initializer), is_mutable, line, col);
+  return std::make_shared<LetStmt>(name, type, std::move(initializer), is_mutable, loc);
 }
 
 StmtPtr Parser::parse_assign_or_expr_stmt() {
-  uint32_t line = current().line;
-  uint32_t col = current().column;
-
+  auto loc = current().location();
+  
   ExprPtr expr = parse_expression();
 
   if (match(TokenType::ASSIGN)) {
     ExprPtr value = parse_expression();
     expect(TokenType::SEMICOLON, "Expected ';' after assignment");
-    return std::make_shared<AssignStmt>(std::move(expr), std::move(value), line, col);
+    return std::make_shared<AssignStmt>(std::move(expr), std::move(value), loc);
   }
 
   expect(TokenType::SEMICOLON, "Expected ';' after expression");
-  return std::make_shared<ExprStmt>(std::move(expr), line, col);
+  return std::make_shared<ExprStmt>(std::move(expr), loc);
 }
 
 StmtPtr Parser::parse_if_stmt() {
-  uint32_t line = previous().line;
-  uint32_t col = previous().column;
+  auto loc = previous().location();
 
   ExprPtr condition = parse_expression();
   StmtPtr then_branch = parse_statement();
@@ -233,22 +224,20 @@ StmtPtr Parser::parse_if_stmt() {
   }
 
   return std::make_shared<IfStmt>(std::move(condition), std::move(then_branch),
-                                  std::move(else_branch), line, col);
+                                  std::move(else_branch), loc);
 }
 
 StmtPtr Parser::parse_while_stmt() {
-  uint32_t line = previous().line;
-  uint32_t col = previous().column;
+  auto loc = previous().location();
 
   ExprPtr condition = parse_expression();
   StmtPtr body = parse_statement();
 
-  return std::make_shared<WhileStmt>(std::move(condition), std::move(body), line, col);
+  return std::make_shared<WhileStmt>(std::move(condition), std::move(body), loc);
 }
 
 StmtPtr Parser::parse_for_stmt() {
-  uint32_t line = previous().line;
-  uint32_t col = previous().column;
+  auto loc = previous().location();
 
   Token& var_token = expect(TokenType::IDENTIFIER, "Expected loop variable name");
   std::string var_name(var_token.text);
@@ -262,12 +251,11 @@ StmtPtr Parser::parse_for_stmt() {
   StmtPtr body = parse_statement();
 
   return std::make_shared<ForStmt>(var_name, std::move(range_start), std::move(range_end),
-                                   std::move(body), line, col);
+                                   std::move(body), loc);
 }
 
 StmtPtr Parser::parse_return_stmt() {
-  uint32_t line = previous().line;
-  uint32_t col = previous().column;
+  auto loc = previous().location();
 
   ExprPtr value = nullptr;
   if (!check(TokenType::SEMICOLON)) {
@@ -276,7 +264,7 @@ StmtPtr Parser::parse_return_stmt() {
 
   expect(TokenType::SEMICOLON, "Expected ';' after return");
 
-  return std::make_shared<ReturnStmt>(std::move(value), line, col);
+  return std::make_shared<ReturnStmt>(std::move(value), loc);
 }
 
 // =============================================================================
@@ -296,11 +284,10 @@ ExprPtr Parser::parse_or() {
   ExprPtr expr = parse_and();
 
   while (match(TokenType::OR)) {
-    uint32_t line = previous().line;
-    uint32_t col = previous().column;
+    auto loc = previous().location();
     ExprPtr right = parse_and();
     expr =
-        std::make_shared<BinaryOpExpr>(BinaryOp::Or, std::move(expr), std::move(right), line, col);
+        std::make_shared<BinaryOpExpr>(BinaryOp::Or, std::move(expr), std::move(right), loc);
   }
 
   return expr;
@@ -310,11 +297,10 @@ ExprPtr Parser::parse_and() {
   ExprPtr expr = parse_equality();
 
   while (match(TokenType::AND)) {
-    uint32_t line = previous().line;
-    uint32_t col = previous().column;
+    auto loc = previous().location();
     ExprPtr right = parse_equality();
     expr =
-        std::make_shared<BinaryOpExpr>(BinaryOp::And, std::move(expr), std::move(right), line, col);
+        std::make_shared<BinaryOpExpr>(BinaryOp::And, std::move(expr), std::move(right), loc);
   }
 
   return expr;
@@ -324,17 +310,14 @@ ExprPtr Parser::parse_equality() {
   ExprPtr expr = parse_comparison();
 
   while (true) {
-    uint32_t line = current().line;
-    uint32_t col = current().column;
+    auto loc = previous().location();
 
     if (match(TokenType::EQ)) {
       ExprPtr right = parse_comparison();
-      expr = std::make_shared<BinaryOpExpr>(BinaryOp::Eq, std::move(expr), std::move(right), line,
-                                            col);
+      expr = std::make_shared<BinaryOpExpr>(BinaryOp::Eq, std::move(expr), std::move(right), loc);
     } else if (match(TokenType::NEQ)) {
       ExprPtr right = parse_comparison();
-      expr = std::make_shared<BinaryOpExpr>(BinaryOp::Neq, std::move(expr), std::move(right), line,
-                                            col);
+      expr = std::make_shared<BinaryOpExpr>(BinaryOp::Neq, std::move(expr), std::move(right), loc);
     } else {
       break;
     }
@@ -347,25 +330,20 @@ ExprPtr Parser::parse_comparison() {
   ExprPtr expr = parse_term();
 
   while (true) {
-    uint32_t line = current().line;
-    uint32_t col = current().column;
+    auto loc = current().location();
 
     if (match(TokenType::LT)) {
       ExprPtr right = parse_term();
-      expr = std::make_shared<BinaryOpExpr>(BinaryOp::Lt, std::move(expr), std::move(right), line,
-                                            col);
+      expr = std::make_shared<BinaryOpExpr>(BinaryOp::Lt, std::move(expr), std::move(right), loc);
     } else if (match(TokenType::GT)) {
       ExprPtr right = parse_term();
-      expr = std::make_shared<BinaryOpExpr>(BinaryOp::Gt, std::move(expr), std::move(right), line,
-                                            col);
+      expr = std::make_shared<BinaryOpExpr>(BinaryOp::Gt, std::move(expr), std::move(right), loc);
     } else if (match(TokenType::LEQ)) {
       ExprPtr right = parse_term();
-      expr = std::make_shared<BinaryOpExpr>(BinaryOp::Leq, std::move(expr), std::move(right), line,
-                                            col);
+      expr = std::make_shared<BinaryOpExpr>(BinaryOp::Leq, std::move(expr), std::move(right), loc);
     } else if (match(TokenType::GEQ)) {
       ExprPtr right = parse_term();
-      expr = std::make_shared<BinaryOpExpr>(BinaryOp::Geq, std::move(expr), std::move(right), line,
-                                            col);
+      expr = std::make_shared<BinaryOpExpr>(BinaryOp::Geq, std::move(expr), std::move(right), loc);
     } else {
       break;
     }
@@ -378,17 +356,14 @@ ExprPtr Parser::parse_term() {
   ExprPtr expr = parse_factor();
 
   while (true) {
-    uint32_t line = current().line;
-    uint32_t col = current().column;
+    auto loc = current().location();
 
     if (match(TokenType::PLUS)) {
       ExprPtr right = parse_factor();
-      expr = std::make_shared<BinaryOpExpr>(BinaryOp::Add, std::move(expr), std::move(right), line,
-                                            col);
+      expr = std::make_shared<BinaryOpExpr>(BinaryOp::Add, std::move(expr), std::move(right), loc);
     } else if (match(TokenType::MINUS)) {
       ExprPtr right = parse_factor();
-      expr = std::make_shared<BinaryOpExpr>(BinaryOp::Sub, std::move(expr), std::move(right), line,
-                                            col);
+      expr = std::make_shared<BinaryOpExpr>(BinaryOp::Sub, std::move(expr), std::move(right), loc);
     } else {
       break;
     }
@@ -401,21 +376,17 @@ ExprPtr Parser::parse_factor() {
   ExprPtr expr = parse_unary();
 
   while (true) {
-    uint32_t line = current().line;
-    uint32_t col = current().column;
+    auto loc = current().location();
 
     if (match(TokenType::STAR)) {
       ExprPtr right = parse_unary();
-      expr = std::make_shared<BinaryOpExpr>(BinaryOp::Mul, std::move(expr), std::move(right), line,
-                                            col);
+      expr = std::make_shared<BinaryOpExpr>(BinaryOp::Mul, std::move(expr), std::move(right), loc);
     } else if (match(TokenType::SLASH)) {
       ExprPtr right = parse_unary();
-      expr = std::make_shared<BinaryOpExpr>(BinaryOp::Div, std::move(expr), std::move(right), line,
-                                            col);
+      expr = std::make_shared<BinaryOpExpr>(BinaryOp::Div, std::move(expr), std::move(right), loc);
     } else if (match(TokenType::PERCENT)) {
       ExprPtr right = parse_unary();
-      expr = std::make_shared<BinaryOpExpr>(BinaryOp::Mod, std::move(expr), std::move(right), line,
-                                            col);
+      expr = std::make_shared<BinaryOpExpr>(BinaryOp::Mod, std::move(expr), std::move(right), loc);
     } else {
       break;
     }
@@ -425,27 +396,26 @@ ExprPtr Parser::parse_factor() {
 }
 
 ExprPtr Parser::parse_unary() {
-  uint32_t line = current().line;
-  uint32_t col = current().column;
+    auto loc = current().location();
 
   if (match(TokenType::NOT)) {
     ExprPtr operand = parse_unary();
-    return std::make_shared<UnaryOpExpr>(UnaryOp::Not, std::move(operand), line, col);
+    return std::make_shared<UnaryOpExpr>(UnaryOp::Not, std::move(operand), loc);
   }
 
   if (match(TokenType::MINUS)) {
     ExprPtr operand = parse_unary();
-    return std::make_shared<UnaryOpExpr>(UnaryOp::Neg, std::move(operand), line, col);
+    return std::make_shared<UnaryOpExpr>(UnaryOp::Neg, std::move(operand), loc);
   }
 
   if (match(TokenType::AMPERSAND)) {
     ExprPtr operand = parse_unary();
-    return std::make_shared<UnaryOpExpr>(UnaryOp::AddrOf, std::move(operand), line, col);
+    return std::make_shared<UnaryOpExpr>(UnaryOp::AddrOf, std::move(operand), loc);
   }
 
   if (match(TokenType::STAR)) {
     ExprPtr operand = parse_unary();
-    return std::make_shared<UnaryOpExpr>(UnaryOp::Deref, std::move(operand), line, col);
+    return std::make_shared<UnaryOpExpr>(UnaryOp::Deref, std::move(operand), loc);
   }
 
   return parse_postfix();
@@ -455,24 +425,23 @@ ExprPtr Parser::parse_postfix() {
   ExprPtr expr = parse_primary();
 
   while (true) {
-    uint32_t line = current().line;
-    uint32_t col = current().column;
+    auto loc = current().location();
 
     if (match(TokenType::LPAREN)) {
       // Function call
       std::vector<ExprPtr> args = parse_arg_list();
       expect(TokenType::RPAREN, "Expected ')' after arguments");
-      expr = std::make_shared<CallExpr>(std::move(expr), std::move(args), line, col);
+      expr = std::make_shared<CallExpr>(std::move(expr), std::move(args), loc);
     } else if (match(TokenType::LBRACKET)) {
       // Array index
       ExprPtr index = parse_expression();
       expect(TokenType::RBRACKET, "Expected ']' after index");
-      expr = std::make_shared<IndexExpr>(std::move(expr), std::move(index), line, col);
+      expr = std::make_shared<IndexExpr>(std::move(expr), std::move(index), loc);
     } else if (match(TokenType::DOT)) {
       // Field access
       Token& field_token = expect(TokenType::IDENTIFIER, "Expected field name");
       std::string field_name(field_token.text);
-      expr = std::make_shared<FieldAccessExpr>(std::move(expr), field_name, line, col);
+      expr = std::make_shared<FieldAccessExpr>(std::move(expr), field_name, loc);
     } else {
       break;
     }
@@ -482,33 +451,32 @@ ExprPtr Parser::parse_postfix() {
 }
 
 ExprPtr Parser::parse_primary() {
-  uint32_t line = current().line;
-  uint32_t col = current().column;
+    auto loc = current().location();
 
   if (match(TokenType::INTEGER_LITERAL)) {
     int64_t value = std::stoll(std::string(previous().text));
-    return std::make_shared<IntegerLiteralExpr>(value, line, col);
+    return std::make_shared<IntegerLiteralExpr>(value, loc);
   }
 
   if (match(TokenType::FLOAT_LITERAL)) {
     double value = std::stod(std::string(previous().text));
-    return std::make_shared<FloatLiteralExpr>(value, line, col);
+    return std::make_shared<FloatLiteralExpr>(value, loc);
   }
 
   if (match(TokenType::TRUE)) {
-    return std::make_shared<BoolLiteralExpr>(true, line, col);
+    return std::make_shared<BoolLiteralExpr>(true, loc);
   }
 
   if (match(TokenType::FALSE)) {
-    return std::make_shared<BoolLiteralExpr>(false, line, col);
+    return std::make_shared<BoolLiteralExpr>(false, loc);
   }
 
   if (match(TokenType::STRING_LITERAL)) {
-    return std::make_shared<StringLiteralExpr>(std::string(previous().text), line, col);
+    return std::make_shared<StringLiteralExpr>(std::string(previous().text), loc);
   }
 
   if (match(TokenType::IDENTIFIER)) {
-    return std::make_shared<VariableExpr>(std::string(previous().text), line, col);
+    return std::make_shared<VariableExpr>(std::string(previous().text), loc);
   }
 
   if (match(TokenType::LPAREN)) {

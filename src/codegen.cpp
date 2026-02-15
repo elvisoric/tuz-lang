@@ -301,6 +301,8 @@ void CodeGenerator::visit(IndexExpr& expr) {
 void CodeGenerator::visit(FieldAccessExpr& expr) {
   llvm::Value* obj = codegen_expr(*expr.object);
 
+  //expr.kind
+
   // This would need struct type info to work properly
   // For now, just push a placeholder
   push_value(obj);

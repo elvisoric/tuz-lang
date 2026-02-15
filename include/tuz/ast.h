@@ -287,11 +287,78 @@ struct GlobalDecl : Decl {
 };
 
 // =============================================================================
+// Scope
+// =============================================================================
+
+enum class SymbolKind {
+    Variable,
+    Function,
+    Struct,
+    Field
+};
+
+struct Symbol {
+    SymbolKind kind;
+    std::string name;
+    Symbol(SymbolKind k, std::string n): kind(k), name(std::move(n)) {}
+    virtual ~Symbol() = default;
+};
+
+struct VariableSymbol : public Symbol {
+    TypePtr type;
+    VariableSymbol(std::string n, TypePtr t)
+        : Symbol(SymbolKind::Variable, std::move(n)), type(std::move(t)) {}
+};
+
+struct FunctionSymbol : public Symbol {
+    TypePtr type;
+    FunctionSymbol(std::string n, TypePtr t)
+        : Symbol(SymbolKind::Function, std::move(n)), type(std::move(t)) {}
+};
+
+struct StructSymbol : public Symbol {
+    TypePtr type;
+    StructSymbol(std::string name, TypePtr type)
+     : Symbol(SymbolKind::Struct, std::move(name)), type(std::move(type)) {}
+};
+
+class Scope {
+public:
+    Scope* parent;
+
+    std::unordered_map<std::string, std::vector<std::shared_ptr<Symbol>>> symbols;
+
+    explicit Scope(Scope* p = nullptr): parent(p) {}
+
+    void declare(std::shared_ptr<Symbol> symbol) {
+        symbols[symbol->name].push_back(std::move(symbol));
+    }
+
+    std::vector<std::shared_ptr<Symbol>>* lookup_local(const std::string& name) {
+        auto it = symbols.find(name);
+        if (it != symbols.end())
+            return &it->second;
+        return nullptr;
+    }
+
+    std::vector<std::shared_ptr<Symbol>>* lookup(const std::string& name) {
+        for (Scope* s = this; s != nullptr; s = s->parent) {
+            auto result = s->lookup_local(name);
+            if (result)
+                return result;
+        }
+        return nullptr;
+    }
+};
+
+
+// =============================================================================
 // Program
 // =============================================================================
 
 struct Program {
   std::vector<DeclPtr> declarations;
+  Scope scope;
 };
 
 // =============================================================================

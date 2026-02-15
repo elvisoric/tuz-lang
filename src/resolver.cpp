@@ -5,7 +5,9 @@
 namespace tuz {
 
 void Resolver::resolve() {
-  std::cout << "Resolving symbols " << std::endl;
+
+
+  auto scope = current_scope();
 
   // Create emtpy struct type entry 
   for (auto& decl : program.declarations) {
@@ -17,27 +19,39 @@ void Resolver::resolve() {
         std::vector<std::pair<std::string, TypePtr>>{}
       );
 
-      types[struct_decl->name] = struct_type;
+      auto symbol = std::make_shared<StructSymbol>(
+          struct_decl->name,
+          struct_type
+      );
+
+      scope->declare(symbol);
     }
   }
 
+  // Fill up struct type fields
   for (auto& decl : program.declarations) {
       if (decl->kind == DeclKind::Struct) {
-
           auto* struct_decl = static_cast<StructDecl*>(decl.get());
 
-          auto struct_type = std::static_pointer_cast<StructType>(
-              types[struct_decl->name]
-          );
+          auto symbols = scope->lookup(struct_decl->name);
 
+          if (!symbols)
+              throw std::runtime_error("Struct not found in scope: " + struct_decl->name);
+
+          auto& symbol = symbols->front();
+
+          if (symbol->kind != SymbolKind::Struct)
+              throw std::runtime_error("Name is not a struct: " + struct_decl->name); 
+              
+          auto* struct_symbol = static_cast<StructSymbol*>(symbol.get());
+          auto struct_type = std::static_pointer_cast<StructType>(struct_symbol->type);
+              
           for (auto& field : struct_decl->fields) {
               auto resolved = resolve_type(field.type);
               struct_type->fields.emplace_back(field.name, resolved);
           }
       }
   }  
-
-
 
   for (auto& decl : program.declarations) {
     visit_decl(*this, *decl);
@@ -55,6 +69,24 @@ void Resolver::visit(StringLiteralExpr& expr) {
 }
 
 void Resolver::visit(VariableExpr& expr) {
+
+  auto symbols = current_scope()->lookup(expr.name);
+
+  if (!symbols || symbols->empty()) {
+      throw std::runtime_error("Unknown identifier: " + expr.name);
+  }
+
+  auto& sym = symbols->front();
+
+  if (sym->kind != SymbolKind::Variable) {
+      throw std::runtime_error(expr.name + " is not a variable");
+  }  
+
+  auto* var_symbol = static_cast<VariableSymbol*>(sym.get());  
+
+  //expr.resolved_symbol = var_symbol;
+  expr.type = var_symbol->type;  
+
 }
 
 void Resolver::visit(BinaryOpExpr& expr) {
@@ -95,8 +127,23 @@ void Resolver::visit(ExprStmt& stmt) {
 
 void Resolver::visit(LetStmt& stmt) {
 
-  stmt.declared_type = resolve_type(stmt.declared_type);
   visit_node(stmt.initializer);
+
+  // Resolve type (TODO: Type inference)
+  stmt.declared_type = resolve_type(stmt.declared_type);
+
+  // Check if we have same symbol 
+  if (current_scope()->lookup_local(stmt.name)) {
+      throw std::runtime_error("Variable already declared: " + stmt.name);
+  }  
+
+  // Define new symbol in the current scope
+  auto symbol = std::make_shared<VariableSymbol>(
+    stmt.name,
+    stmt.declared_type
+  );
+
+  current_scope()->declare(symbol);
 }
 
 void Resolver::visit(AssignStmt& stmt) {
@@ -104,6 +151,7 @@ void Resolver::visit(AssignStmt& stmt) {
 }
 
 void Resolver::visit(BlockStmt& stmt) {
+  ScopeGuard guard(*this);
 
   for (auto& s : stmt.statements) {
     visit_node(s);
@@ -131,6 +179,9 @@ void Resolver::visit(ReturnStmt& stmt) {
 
 // Declarations
 void Resolver::visit(FunctionDecl& decl) {
+
+  ScopeGuard guard(*this);
+
 
   for (auto& param : decl.params) {
     param.type = resolve_type(param.type);
@@ -162,33 +213,23 @@ TypePtr Resolver::resolve_type(TypePtr type) {
     if (ref->resolved_type)
       return ref->resolved_type;    
 
-    auto it = types.find(ref->type_name);
+    auto symbols = current_scope()->lookup_local(ref->type_name);
 
-    if (it == types.end()) {
-      throw std::runtime_error(
-          "Failed to resolve type: " + ref->type_name
-      );
-    }
-    
-    ref->resolved_type = it->second;
-    auto resolved = static_cast<StructType*>(it->second.get());
+    if (!symbols || symbols->empty()) {
+        throw std::runtime_error("Failed to resolve type: " + ref->type_name);
+    }     
 
-    if (resolved) {
-      std::cout << "Type " 
-                << resolved->name
-                << " resolved: fields=" 
-                << resolved->fields.size()
-                << ", size=" 
-                << resolved->size()
-                << ", alignment=" 
-                << resolved->alignment()
-                << std::endl;
+    auto& sym = symbols->front();
+
+    if (sym->kind != SymbolKind::Struct) {
+      throw std::runtime_error(ref->type_name + " is not a struct type");
     }
 
+    auto* struct_symbol = static_cast<StructSymbol*>(sym.get());
 
-    return ref->resolved_type;
+    ref->resolved_type = struct_symbol->type;
+    return struct_symbol->type;
   }
-
 
   return type;
 }

@@ -11,16 +11,37 @@
 
 namespace tuz {
 
+
+
 class Resolver : public ASTVisitorDelux {
-private:  
-  
-  std::unordered_map<std::string, TypePtr> types;
+
+private:
+  std::vector<std::unique_ptr<Scope>> scope_stack;
 
 public:
   Program& program;
-  
 
-  explicit Resolver(Program& program) : program(program) {}
+  explicit Resolver(Program& program) : program(program) {
+  }
+
+  void push_scope() {
+    Scope* parent = current_scope();
+    scope_stack.push_back(std::make_unique<Scope>(parent));
+  }
+
+  void pop_scope() {
+    if (scope_stack.size() <= 1) {
+        throw std::runtime_error("Cannot pop global scope");
+    }
+    scope_stack.pop_back();
+  }
+
+  Scope* current_scope() {
+      if (scope_stack.empty())
+          return &program.scope;
+
+      return scope_stack.back().get();
+  }
 
   void resolve();
 
@@ -55,6 +76,18 @@ public:
 private:
   TypePtr resolve_type(TypePtr type);
   FunctionDecl* resolve_function(std::string_view fn_name);
+};
+
+class ScopeGuard {
+    Resolver& resolver;
+public:
+    ScopeGuard(Resolver& r) : resolver(r) {
+        resolver.push_scope();
+    }
+
+    ~ScopeGuard() {
+        resolver.pop_scope();
+    }
 };
 
 } // namespace tuz

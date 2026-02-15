@@ -40,6 +40,7 @@ set(TUZ_SOURCES
     src/type.cpp
     src/driver.cpp
     src/diagnostic.cpp
+    src/resolver.cpp
     src/main.cpp
 )
 
@@ -84,6 +85,7 @@ set(TUZ_LIB_SOURCES
     src/type.cpp
     src/driver.cpp
     src/diagnostic.cpp
+    src/resolver.cpp
 )
 add_executable(test_integration tests/test_integration.cpp ${TUZ_LIB_SOURCES})
 target_include_directories(test_integration PRIVATE include ${LLVM_INCLUDE_DIRS})

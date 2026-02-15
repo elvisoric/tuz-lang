@@ -1,9 +1,10 @@
 #pragma once
 
+#include "tuz/token.h"
+
 #include <memory>
 #include <string>
 #include <vector>
-#include "tuz/token.h"
 
 namespace tuz {
 
@@ -50,20 +51,17 @@ struct Expr {
 
 struct IntegerLiteralExpr : Expr {
   int64_t value;
-  IntegerLiteralExpr(int64_t v, Location loc)
-      : Expr(ExprKind::IntegerLiteral, loc), value(v) {}
+  IntegerLiteralExpr(int64_t v, Location loc) : Expr(ExprKind::IntegerLiteral, loc), value(v) {}
 };
 
 struct FloatLiteralExpr : Expr {
   double value;
-  FloatLiteralExpr(double v, Location loc)
-      : Expr(ExprKind::FloatLiteral, loc), value(v) {}
+  FloatLiteralExpr(double v, Location loc) : Expr(ExprKind::FloatLiteral, loc), value(v) {}
 };
 
 struct BoolLiteralExpr : Expr {
   bool value;
-  BoolLiteralExpr(bool v, Location loc)
-      : Expr(ExprKind::BoolLiteral, loc), value(v) {}
+  BoolLiteralExpr(bool v, Location loc) : Expr(ExprKind::BoolLiteral, loc), value(v) {}
 };
 
 struct StringLiteralExpr : Expr {
@@ -74,8 +72,7 @@ struct StringLiteralExpr : Expr {
 
 struct VariableExpr : Expr {
   std::string name;
-  VariableExpr(std::string n, Location loc)
-      : Expr(ExprKind::Variable, loc), name(std::move(n)) {}
+  VariableExpr(std::string n, Location loc) : Expr(ExprKind::Variable, loc), name(std::move(n)) {}
 };
 
 enum class BinaryOp {
@@ -173,8 +170,7 @@ struct Stmt {
 
 struct ExprStmt : Stmt {
   ExprPtr expr;
-  ExprStmt(ExprPtr e, Location loc)
-      : Stmt(StmtKind::Expr, loc), expr(std::move(e)) {}
+  ExprStmt(ExprPtr e, Location loc) : Stmt(StmtKind::Expr, loc), expr(std::move(e)) {}
 };
 
 struct LetStmt : Stmt {
@@ -228,8 +224,7 @@ struct ForStmt : Stmt {
 
 struct ReturnStmt : Stmt {
   ExprPtr value; // Can be nullptr for void return
-  ReturnStmt(ExprPtr val, Location loc)
-      : Stmt(StmtKind::Return, loc), value(std::move(val)) {}
+  ReturnStmt(ExprPtr val, Location loc) : Stmt(StmtKind::Return, loc), value(std::move(val)) {}
 };
 
 // =============================================================================
@@ -287,8 +282,8 @@ struct GlobalDecl : Decl {
   ExprPtr initializer;
   bool is_mutable;
   GlobalDecl(std::string n, TypePtr t, ExprPtr init, bool mut, Location loc)
-      : Decl(DeclKind::Global, std::move(n), loc), type(std::move(t)),
-        initializer(std::move(init)), is_mutable(mut) {}
+      : Decl(DeclKind::Global, std::move(n), loc), type(std::move(t)), initializer(std::move(init)),
+        is_mutable(mut) {}
 };
 
 // =============================================================================
@@ -336,9 +331,30 @@ public:
   virtual void visit(GlobalDecl& decl) = 0;
 };
 
+
 // Helper functions for visiting
 void visit_expr(ASTVisitor& visitor, Expr& expr);
 void visit_stmt(ASTVisitor& visitor, Stmt& stmt);
 void visit_decl(ASTVisitor& visitor, Decl& decl);
+
+
+class ASTVisitorDelux : public ASTVisitor {
+public:
+  void visit_node(ExprPtr& node) {
+    if (node)
+      visit_expr(*this, *node);
+  }
+
+  void visit_node(StmtPtr& node) {
+    if (node)
+      visit_stmt(*this, *node);
+  }
+
+  void visit_node(DeclPtr& node) {
+    if (node)
+      visit_decl(*this, *node);
+  }
+};
+
 
 } // namespace tuz

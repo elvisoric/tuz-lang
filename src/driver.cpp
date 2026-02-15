@@ -5,6 +5,7 @@
 #include "tuz/diagnostic.h"
 #include "tuz/lexer.h"
 #include "tuz/parser.h"
+#include "tuz/resolver.h"
 
 #include <cstdlib>
 #include <iostream>
@@ -64,6 +65,15 @@ bool Driver::compile(const CompileOptions& options) {
 
   if (options.verbose) {
     std::cout << "  Declarations: " << program.declarations.size() << std::endl;
+  }
+
+  // Resolve types and/or function overloads
+  try {
+    Resolver resolver(program);
+    resolver.resolve();
+  } catch (const std::exception& e) {
+    diagnostics.error(e.what());
+    return false;
   }
 
   // Code generation

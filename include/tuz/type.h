@@ -58,37 +58,39 @@ public:
   virtual size_t alignment() const;
 };
 
-class TypeName: public Type {
-public: 
+class TypeName : public Type {
+public:
   std::string type_name;
   TypePtr resolved_type;
 
-  explicit TypeName(std::string type_name) : Type(TypeKind::TypeName), type_name(type_name)  {}
+  explicit TypeName(std::string type_name) : Type(TypeKind::TypeName), type_name(type_name) {}
 
   std::string to_string() const override { return type_name; }
-  
+
   bool equals(const Type& other) const override {
-      if (!resolved_type)
-          return false;
+    if (!resolved_type)
+      return false;
 
-      if (auto* otherName = dynamic_cast<const TypeName*>(&other)) {
-          if (!otherName->resolved_type)
-              return false;
-          return resolved_type->equals(*otherName->resolved_type);
-      }
+    if (auto* otherName = dynamic_cast<const TypeName*>(&other)) {
+      if (!otherName->resolved_type)
+        return false;
+      return resolved_type->equals(*otherName->resolved_type);
+    }
 
-      return resolved_type->equals(other);
+    return resolved_type->equals(other);
   }
 
-  size_t size() const override { 
-    if (!resolved_type) return 0;
-    return resolved_type->size(); 
+  size_t size() const override {
+    if (!resolved_type)
+      return 0;
+    return resolved_type->size();
   }
-  
-  size_t alignment() const override { 
-    if (!resolved_type) return 0;
-    return resolved_type->alignment(); 
-  }  
+
+  size_t alignment() const override {
+    if (!resolved_type)
+      return 0;
+    return resolved_type->alignment();
+  }
 };
 
 // Pointer type

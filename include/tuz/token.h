@@ -111,7 +111,7 @@ struct Token {
     return is(t1) || is_one_of(t2, ts...);
   }
 
-  Location location() { return { line, column }; }
+  Location location() { return {line, column}; }
 };
 
 struct TokenDefinition {

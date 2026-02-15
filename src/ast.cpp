@@ -43,6 +43,7 @@ void visit_expr(ASTVisitor& visitor, Expr& expr) {
 
 // Statement visitor dispatch
 void visit_stmt(ASTVisitor& visitor, Stmt& stmt) {
+
   switch (stmt.kind) {
   case StmtKind::Expr:
     visitor.visit(static_cast<ExprStmt&>(stmt));

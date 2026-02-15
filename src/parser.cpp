@@ -1,5 +1,7 @@
 #include "tuz/parser.h"
 
+#include <iostream>
+
 namespace tuz {
 
 Parser::Parser(std::vector<Token> tokens) : tokens_(std::move(tokens)), position_(0) {
@@ -43,7 +45,7 @@ DeclPtr Parser::parse_declaration() {
 
 DeclPtr Parser::parse_extern_decl() {
   auto loc = previous().location();
-  
+
   expect(TokenType::FN, "Expected 'fn' after 'extern'");
 
   Token& name_token = expect(TokenType::IDENTIFIER, "Expected function name");
@@ -65,7 +67,7 @@ DeclPtr Parser::parse_extern_decl() {
 
 DeclPtr Parser::parse_function_decl() {
   auto loc = previous().location();
-  
+
   Token& name_token = expect(TokenType::IDENTIFIER, "Expected function name");
   std::string name(name_token.text);
 
@@ -95,7 +97,7 @@ DeclPtr Parser::parse_function_decl() {
 
 DeclPtr Parser::parse_struct_decl() {
   auto loc = previous().location();
-  
+
   Token& name_token = expect(TokenType::IDENTIFIER, "Expected struct name");
   std::string name(name_token.text);
 
@@ -108,7 +110,7 @@ DeclPtr Parser::parse_struct_decl() {
 
 DeclPtr Parser::parse_global_decl() {
   auto loc = previous().location();
-  
+
   bool is_mutable = match(TokenType::MUT);
 
   Token& name_token = expect(TokenType::IDENTIFIER, "Expected variable name");
@@ -158,7 +160,7 @@ StmtPtr Parser::parse_statement() {
 
 StmtPtr Parser::parse_block_stmt() {
   auto loc = previous().location();
-  
+
   // If we didn't consume the '{' in match, consume it now
   if (previous().type != TokenType::LBRACE) {
     expect(TokenType::LBRACE, "Expected '{'");
@@ -199,7 +201,7 @@ StmtPtr Parser::parse_let_stmt() {
 
 StmtPtr Parser::parse_assign_or_expr_stmt() {
   auto loc = current().location();
-  
+
   ExprPtr expr = parse_expression();
 
   if (match(TokenType::ASSIGN)) {
@@ -286,8 +288,7 @@ ExprPtr Parser::parse_or() {
   while (match(TokenType::OR)) {
     auto loc = previous().location();
     ExprPtr right = parse_and();
-    expr =
-        std::make_shared<BinaryOpExpr>(BinaryOp::Or, std::move(expr), std::move(right), loc);
+    expr = std::make_shared<BinaryOpExpr>(BinaryOp::Or, std::move(expr), std::move(right), loc);
   }
 
   return expr;
@@ -299,8 +300,7 @@ ExprPtr Parser::parse_and() {
   while (match(TokenType::AND)) {
     auto loc = previous().location();
     ExprPtr right = parse_equality();
-    expr =
-        std::make_shared<BinaryOpExpr>(BinaryOp::And, std::move(expr), std::move(right), loc);
+    expr = std::make_shared<BinaryOpExpr>(BinaryOp::And, std::move(expr), std::move(right), loc);
   }
 
   return expr;
@@ -396,7 +396,7 @@ ExprPtr Parser::parse_factor() {
 }
 
 ExprPtr Parser::parse_unary() {
-    auto loc = current().location();
+  auto loc = current().location();
 
   if (match(TokenType::NOT)) {
     ExprPtr operand = parse_unary();
@@ -451,7 +451,7 @@ ExprPtr Parser::parse_postfix() {
 }
 
 ExprPtr Parser::parse_primary() {
-    auto loc = current().location();
+  auto loc = current().location();
 
   if (match(TokenType::INTEGER_LITERAL)) {
     int64_t value = std::stoll(std::string(previous().text));
@@ -531,11 +531,9 @@ TypePtr Parser::parse_type() {
   } else if (match(TokenType::VOID)) {
     base_type = get_void_type();
   } else if (match(TokenType::IDENTIFIER)) {
-    // Could be a struct type
+
     std::string name(previous().text);
-    // For now, return int32 as placeholder for struct types
-    // In a full implementation, we'd look up the struct in a symbol table
-    base_type = get_int32_type();
+    base_type = make_shared<TypeName>(name);
   } else {
     throw error("Expected type");
   }

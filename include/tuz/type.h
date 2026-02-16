@@ -154,6 +154,7 @@ public:
   size_t size() const override;
   size_t alignment() const override;
   std::optional<size_t> get_field_offset(const std::string& field_name) const;
+  int get_field_index(const std::string& field_name) const;
   TypePtr get_field_type(const std::string& field_name) const;
 };
 

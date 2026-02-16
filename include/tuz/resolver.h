@@ -22,6 +22,7 @@ public:
   Program& program;
 
   explicit Resolver(Program& program) : program(program) {
+    push_scope();
   }
 
   void push_scope() {

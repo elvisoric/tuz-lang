@@ -104,6 +104,27 @@ llvm::Type* CodeGenerator::convert_type(TypePtr type) {
     llvm::Type* elem = convert_type(arr_type->element_type);
     return llvm::ArrayType::get(elem, arr_type->size_val);
   }
+  case TypeKind::Struct: {
+    auto* struct_type = static_cast<StructType*>(type.get());
+
+    auto it = struct_types_.find(struct_type->name);
+    if (it != struct_types_.end()) {
+        return it->second;
+    }
+
+    auto* llvm_struct = llvm::StructType::create(*context_, struct_type->name);
+    struct_types_[struct_type->name] = llvm_struct;
+
+    std::vector<llvm::Type*> field_types;
+    for (auto& [field_name, field_type] : struct_type->fields) {
+        field_types.push_back(convert_type(field_type));
+    }
+
+    llvm_struct->setBody(field_types, false);
+    return llvm_struct;
+
+
+  }
   default:
     return llvm::Type::getInt32Ty(*context_);
   }
@@ -299,13 +320,34 @@ void CodeGenerator::visit(IndexExpr& expr) {
 }
 
 void CodeGenerator::visit(FieldAccessExpr& expr) {
-  llvm::Value* obj = codegen_expr(*expr.object);
 
-  //expr.kind
+  llvm::Value* obj_ptr = codegen_expr_address(*expr.object);
 
-  // This would need struct type info to work properly
-  // For now, just push a placeholder
-  push_value(obj);
+  if (!obj_ptr)
+      throw CodeGenError("invalid field access");  
+
+  TypePtr base_type = expr.object->type;
+  if (base_type->kind == TypeKind::Pointer) {
+      base_type = static_cast<PointerType*>(base_type.get())->pointee;
+  }
+  auto struct_type = std::static_pointer_cast<StructType>(base_type);
+
+  int index = struct_type->get_field_index(expr.field);
+
+  if (index < 0) throw CodeGenError("unknown field: " + expr.field);
+
+  llvm::StructType* llvm_struct = llvm::cast<llvm::StructType>(convert_type(struct_type));  
+
+  llvm::Value* field_ptr = builder_->CreateStructGEP(
+      llvm_struct,
+      obj_ptr,
+      index
+  );      
+
+  llvm::Type* field_llvm_type = convert_type(expr.type);     
+  llvm::Value* loaded = builder_->CreateLoad(field_llvm_type, field_ptr);  
+
+  push_value(loaded);
 }
 
 void CodeGenerator::visit(CastExpr& expr) {
@@ -387,6 +429,43 @@ void CodeGenerator::visit(AssignStmt& stmt) {
         llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context_), 0), index};
     llvm::Value* elem_ptr = get_element_ptr(array, indices, convert_type(stmt.value->type));
     builder_->CreateStore(val, elem_ptr);
+  }
+  else if (stmt.target->kind == ExprKind::FieldAccess) {
+
+    auto& fa = static_cast<FieldAccessExpr&>(*stmt.target);
+
+    llvm::Value* obj = codegen_expr_address(*fa.object);
+
+    if (!obj) throw CodeGenError("invalid field access target");
+
+
+    TypePtr base_type = fa.object->type;
+
+    if (base_type->kind == TypeKind::Pointer) {
+        auto* ptr = static_cast<PointerType*>(base_type.get());
+        base_type = ptr->pointee;
+    }
+    auto struct_type = std::static_pointer_cast<StructType>(base_type);
+
+    int index = struct_type->get_field_index(fa.field);
+
+    if (index < 0)
+        throw CodeGenError("unknown field: " + fa.field);
+
+    llvm::StructType* llvm_struct =
+      llvm::cast<llvm::StructType>(
+        convert_type(struct_type)
+    );   
+
+    llvm::Value* field_ptr = builder_->CreateStructGEP(
+        llvm_struct,
+        obj,
+        index
+    );
+
+
+    llvm::Value* val = codegen_expr(*stmt.value);
+    builder_->CreateStore(val, field_ptr);   
   }
 }
 
@@ -608,13 +687,21 @@ void CodeGenerator::visit(FunctionDecl& decl) {
 }
 
 void CodeGenerator::visit(StructDecl& decl) {
+
+  auto it = struct_types_.find(decl.name);
+  if (it != struct_types_.end())
+    return;
+
+  auto* llvm_struct = llvm::StructType::create(*context_, decl.name);
+
+  struct_types_[decl.name] = llvm_struct;
+
   std::vector<llvm::Type*> field_types;
   for (auto& field : decl.fields) {
     field_types.push_back(convert_type(field.type));
-  }
+  }  
 
-  auto* struct_type = llvm::StructType::create(*context_, field_types, decl.name);
-  struct_types_[decl.name] = struct_type;
+  llvm_struct->setBody(field_types, false);
 }
 
 void CodeGenerator::visit(GlobalDecl& decl) {
@@ -775,5 +862,68 @@ void CodeGenerator::compile_to_object(const std::string& filename) {
   pass.run(*module_);
   dest.flush();
 }
+
+
+llvm::Value* CodeGenerator::codegen_expr_address(Expr& expr) {
+
+    switch (expr.kind) {
+
+    case ExprKind::Variable: {
+        auto& var = static_cast<VariableExpr&>(expr);
+        llvm::Value* ptr = get_variable(var.name);
+        if (!ptr)
+            throw CodeGenError("unknown variable: " + var.name);
+        return ptr;
+    }
+
+    case ExprKind::FieldAccess: {
+        auto& field = static_cast<FieldAccessExpr&>(expr);
+        llvm::Value* struct_ptr = codegen_expr_address(*field.object);
+
+        if (!struct_ptr)
+            throw CodeGenError("invalid struct object");
+
+        auto struct_type =
+            std::static_pointer_cast<StructType>(
+                field.object->type
+            );
+
+        int field_index = struct_type->get_field_index(field.field);
+
+        if (field_index < 0)
+            throw CodeGenError("unknown field: " + field.field);
+
+        return builder_->CreateStructGEP(
+            convert_type(struct_type),
+            struct_ptr,
+            field_index
+        );
+    }
+
+    case ExprKind::Index: {
+        auto& idx = static_cast<IndexExpr&>(expr);
+
+        llvm::Value* base_ptr =
+            codegen_expr_address(*idx.array);
+
+        llvm::Value* index =
+            codegen_expr(*idx.index);
+
+        return builder_->CreateGEP(
+            convert_type(idx.array->type),
+            base_ptr,
+            {
+                llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context_), 0), 
+                index
+            }
+        );
+    }
+
+    default:
+        throw CodeGenError("expression is not assignable (not an lvalue)");
+    }
+}
+
+
 
 } // namespace tuz

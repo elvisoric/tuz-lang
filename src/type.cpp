@@ -257,6 +257,16 @@ std::optional<size_t> StructType::get_field_offset(const std::string& field_name
   return std::nullopt;
 }
 
+int StructType::get_field_index(const std::string& field_name) const {
+  for (size_t i = 0; i < fields.size(); ++i) {
+      if (fields[i].first == field_name) {
+          return (int)i;
+      }
+  }
+  return -1;
+}
+
+
 TypePtr StructType::get_field_type(const std::string& field_name) const {
   for (const auto& [name, type] : fields) {
     if (name == field_name) {

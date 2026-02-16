@@ -53,6 +53,31 @@ void Resolver::resolve() {
       }
   }  
 
+  // Create emtpy struct type entry 
+  for (auto& decl : program.declarations) {
+    if (decl->kind == DeclKind::Function) {
+      auto* func = static_cast<FunctionDecl*>(decl.get());
+
+      std::vector<TypePtr> arg_types;
+
+      for (auto& p: func->params) {
+         arg_types.push_back(p.type);
+      }
+
+      auto func_type = std::make_shared<FunctionType>(
+        arg_types,
+        func->return_type
+      );
+
+      auto symbol = std::make_shared<FunctionSymbol>(
+          func->name,
+          func_type
+      );
+
+      scope->declare(symbol);
+    }
+  }  
+
   for (auto& decl : program.declarations) {
     visit_decl(*this, *decl);
   }
@@ -60,12 +85,19 @@ void Resolver::resolve() {
 
 // Expressions
 void Resolver::visit(IntegerLiteralExpr& expr) {
+  expr.type = get_int32_type();
 }
+
 void Resolver::visit(FloatLiteralExpr& expr) {
+  expr.type = get_float32_type();
 }
+
 void Resolver::visit(BoolLiteralExpr& expr) {
+  expr.type = get_bool_type();
 }
+
 void Resolver::visit(StringLiteralExpr& expr) {
+
 }
 
 void Resolver::visit(VariableExpr& expr) {
@@ -78,14 +110,16 @@ void Resolver::visit(VariableExpr& expr) {
 
   auto& sym = symbols->front();
 
-  if (sym->kind != SymbolKind::Variable) {
-      throw std::runtime_error(expr.name + " is not a variable");
+  if (sym->kind == SymbolKind::Variable) {
+      auto* var_symbol = static_cast<VariableSymbol*>(sym.get());  
+      expr.type = var_symbol->type;  
   }  
-
-  auto* var_symbol = static_cast<VariableSymbol*>(sym.get());  
+  else if (sym->kind == SymbolKind::Function) {
+      auto* var_symbol = static_cast<FunctionSymbol*>(sym.get());  
+      expr.type = var_symbol->type;  
+  }
 
   //expr.resolved_symbol = var_symbol;
-  expr.type = var_symbol->type;  
 
 }
 
@@ -113,6 +147,36 @@ void Resolver::visit(IndexExpr& expr) {
 
 void Resolver::visit(FieldAccessExpr& expr) {
   visit_node(expr.object);
+
+  TypePtr base_type = expr.object->type;
+
+  if (!base_type) {
+      throw std::runtime_error("field access on unknown type");
+  }
+
+  if (base_type->kind == TypeKind::Pointer) {
+      base_type = static_cast<PointerType*>(base_type.get())->pointee;
+  }
+
+  if (base_type->kind != TypeKind::Struct) {
+      throw std::runtime_error(
+          "field access on non-struct type: "
+          + base_type->to_string()
+      );
+  }  
+
+  auto struct_type = std::static_pointer_cast<StructType>(base_type);  
+  auto field_type = struct_type->get_field_type(expr.field);  
+
+  if (!field_type) {
+      throw std::runtime_error(
+          "unknown field '" + expr.field +
+          "' in struct " + struct_type->name
+      );
+  }
+
+
+  expr.type = field_type;
 }
 
 void Resolver::visit(CastExpr& expr) {
@@ -148,6 +212,8 @@ void Resolver::visit(LetStmt& stmt) {
 
 void Resolver::visit(AssignStmt& stmt) {
   //
+  visit_node(stmt.target);
+  visit_node(stmt.value);
 }
 
 void Resolver::visit(BlockStmt& stmt) {
@@ -170,6 +236,20 @@ void Resolver::visit(WhileStmt& stmt) {
 }
 
 void Resolver::visit(ForStmt& stmt) {
+  ScopeGuard guard(*this);
+
+  // Check if we have same symbol 
+  if (current_scope()->lookup_local(stmt.var_name)) {
+      throw std::runtime_error("Variable already declared: " + stmt.var_name);
+  }  
+
+  // Define new symbol in the current scope
+  auto symbol = std::make_shared<VariableSymbol>(
+    stmt.var_name,
+    get_int32_type()
+  );
+
+  current_scope()->declare(symbol);  
 
   visit_node(stmt.body);
 }
@@ -213,7 +293,7 @@ TypePtr Resolver::resolve_type(TypePtr type) {
     if (ref->resolved_type)
       return ref->resolved_type;    
 
-    auto symbols = current_scope()->lookup_local(ref->type_name);
+    auto symbols = current_scope()->lookup(ref->type_name);
 
     if (!symbols || symbols->empty()) {
         throw std::runtime_error("Failed to resolve type: " + ref->type_name);

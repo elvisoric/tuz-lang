@@ -1,12 +1,12 @@
 #pragma once
 
 #include <cstdint>
-#include <string>
-#include <vector>
-#include <memory>
 #include <iostream>
+#include <memory>
 #include <sstream>
+#include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace tuz {
 
@@ -17,7 +17,7 @@ namespace tuz {
 struct SourceLocation {
   uint32_t line;
   uint32_t column;
-  uint32_t length;  // Length of the token/span
+  uint32_t length; // Length of the token/span
 
   SourceLocation(uint32_t ln = 0, uint32_t col = 0, uint32_t len = 0)
       : line(ln), column(col), length(len) {}
@@ -45,7 +45,7 @@ public:
 private:
   std::string path_;
   std::string content_;
-  std::vector<size_t> line_offsets_;  // Offset of each line start
+  std::vector<size_t> line_offsets_; // Offset of each line start
 
   void compute_line_offsets();
 };
@@ -76,10 +76,10 @@ private:
 // =============================================================================
 
 enum class DiagnosticLevel {
-  Note,     // Additional information
-  Warning,  // Warning, compilation continues
-  Error,    // Error, compilation continues but will fail
-  Fatal,    // Fatal error, stops immediately
+  Note,    // Additional information
+  Warning, // Warning, compilation continues
+  Error,   // Error, compilation continues but will fail
+  Fatal,   // Fatal error, stops immediately
 };
 
 // =============================================================================
@@ -91,7 +91,7 @@ struct DiagnosticMessage {
   std::string message;
   SourceLocation location;
   std::shared_ptr<SourceFile> file;
-  std::vector<DiagnosticMessage> notes;  // Related notes
+  std::vector<DiagnosticMessage> notes; // Related notes
 
   DiagnosticMessage(DiagnosticLevel lvl, std::string msg, SourceLocation loc = {},
                     std::shared_ptr<SourceFile> src = nullptr)
@@ -172,13 +172,13 @@ public:
              std::shared_ptr<SourceFile> file = nullptr);
 
   // Report with current source file context
-  void report_at(DiagnosticLevel level, const std::string& message, uint32_t line,
-                 uint32_t column);
+  void report_at(DiagnosticLevel level, const std::string& message, uint32_t line, uint32_t column);
 
   // Check if errors occurred
   bool has_errors() const { return consumer_ && consumer_->has_errors(); }
   void reset() {
-    if (consumer_) consumer_->reset();
+    if (consumer_)
+      consumer_->reset();
   }
 
 private:

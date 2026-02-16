@@ -1,7 +1,6 @@
 #pragma once
 
 #include "ast.h"
-#include "diagnostic.h"
 #include "type.h"
 
 #include <llvm/IR/BasicBlock.h>
@@ -17,8 +16,6 @@
 #include <vector>
 
 namespace tuz {
-
-
 
 class CodeGenerator : public ASTVisitor {
 public:

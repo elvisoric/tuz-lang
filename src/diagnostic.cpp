@@ -1,9 +1,9 @@
 #include "tuz/diagnostic.h"
 
-#include <fstream>
-#include <sstream>
-#include <iomanip>
 #include <algorithm>
+#include <fstream>
+#include <iomanip>
+#include <sstream>
 
 namespace tuz {
 
@@ -18,7 +18,7 @@ SourceFile::SourceFile(std::string path, std::string content)
 
 void SourceFile::compute_line_offsets() {
   line_offsets_.clear();
-  line_offsets_.push_back(0);  // Line 1 starts at offset 0
+  line_offsets_.push_back(0); // Line 1 starts at offset 0
 
   for (size_t i = 0; i < content_.size(); ++i) {
     if (content_[i] == '\n') {
@@ -36,7 +36,7 @@ std::string SourceFile::get_line(uint32_t line_num) const {
   size_t end = content_.size();
 
   if (line_num < line_offsets_.size()) {
-    end = line_offsets_[line_num] - 1;  // Exclude the newline
+    end = line_offsets_[line_num] - 1; // Exclude the newline
   }
 
   // Also exclude \r for Windows line endings
@@ -82,9 +82,9 @@ std::shared_ptr<SourceFile> SourceManager::get_file(const std::string& path) con
 // Console Diagnostic Consumer
 // =============================================================================
 
-ConsoleDiagnosticConsumer::ConsoleDiagnosticConsumer(bool use_colors,
-                                                      bool show_source_context)
-    : use_colors_(use_colors), show_source_context_(show_source_context) {}
+ConsoleDiagnosticConsumer::ConsoleDiagnosticConsumer(bool use_colors, bool show_source_context)
+    : use_colors_(use_colors), show_source_context_(show_source_context) {
+}
 
 void ConsoleDiagnosticConsumer::reset() {
   error_count_ = 0;
@@ -92,19 +92,20 @@ void ConsoleDiagnosticConsumer::reset() {
 }
 
 std::string ConsoleDiagnosticConsumer::color_for_level(DiagnosticLevel level) const {
-  if (!use_colors_) return "";
+  if (!use_colors_)
+    return "";
 
   switch (level) {
-    case DiagnosticLevel::Note:
-      return "\033[36m";  // Cyan
-    case DiagnosticLevel::Warning:
-      return "\033[33m";  // Yellow
-    case DiagnosticLevel::Error:
-      return "\033[31m";  // Red
-    case DiagnosticLevel::Fatal:
-      return "\033[35m";  // Magenta
-    default:
-      return "";
+  case DiagnosticLevel::Note:
+    return "\033[36m"; // Cyan
+  case DiagnosticLevel::Warning:
+    return "\033[33m"; // Yellow
+  case DiagnosticLevel::Error:
+    return "\033[31m"; // Red
+  case DiagnosticLevel::Fatal:
+    return "\033[35m"; // Magenta
+  default:
+    return "";
   }
 }
 
@@ -114,16 +115,16 @@ std::string ConsoleDiagnosticConsumer::reset_color() const {
 
 std::string ConsoleDiagnosticConsumer::level_to_string(DiagnosticLevel level) const {
   switch (level) {
-    case DiagnosticLevel::Note:
-      return "note";
-    case DiagnosticLevel::Warning:
-      return "warning";
-    case DiagnosticLevel::Error:
-      return "error";
-    case DiagnosticLevel::Fatal:
-      return "fatal error";
-    default:
-      return "unknown";
+  case DiagnosticLevel::Note:
+    return "note";
+  case DiagnosticLevel::Warning:
+    return "warning";
+  case DiagnosticLevel::Error:
+    return "error";
+  case DiagnosticLevel::Fatal:
+    return "fatal error";
+  default:
+    return "unknown";
   }
 }
 
@@ -159,7 +160,7 @@ void ConsoleDiagnosticConsumer::print_source_context(const DiagnosticMessage& di
       std::string_view line_view = line_content;
       for (size_t i = 0; i < col_num - 1 && i < line_view.size(); ++i) {
         if (line_view[i] == '\t') {
-          visual_col = (visual_col + 8) & ~7;  // Tab to 8 spaces
+          visual_col = (visual_col + 8) & ~7; // Tab to 8 spaces
         } else {
           ++visual_col;
         }
@@ -194,8 +195,7 @@ void ConsoleDiagnosticConsumer::print_source_context(const DiagnosticMessage& di
 void ConsoleDiagnosticConsumer::print_message(const DiagnosticMessage& msg, bool is_note) {
   // Location info
   if (msg.file && msg.location.is_valid()) {
-    std::cerr << msg.file->path() << ":" << msg.location.line << ":" << msg.location.column
-              << ": ";
+    std::cerr << msg.file->path() << ":" << msg.location.line << ":" << msg.location.column << ": ";
   }
 
   // Level and color
@@ -229,15 +229,15 @@ void ConsoleDiagnosticConsumer::print_message(const DiagnosticMessage& msg, bool
 
 void ConsoleDiagnosticConsumer::consume(const DiagnosticMessage& diagnostic) {
   switch (diagnostic.level) {
-    case DiagnosticLevel::Error:
-    case DiagnosticLevel::Fatal:
-      ++error_count_;
-      break;
-    case DiagnosticLevel::Warning:
-      ++warning_count_;
-      break;
-    default:
-      break;
+  case DiagnosticLevel::Error:
+  case DiagnosticLevel::Fatal:
+    ++error_count_;
+    break;
+  case DiagnosticLevel::Warning:
+    ++warning_count_;
+    break;
+  default:
+    break;
   }
 
   print_message(diagnostic, false);
@@ -249,9 +249,10 @@ void ConsoleDiagnosticConsumer::consume(const DiagnosticMessage& diagnostic) {
 
 DiagnosticEngine::DiagnosticEngine() = default;
 
-void DiagnosticEngine::report(DiagnosticLevel level, const std::string& message,
-                              SourceLocation loc, std::shared_ptr<SourceFile> file) {
-  if (!consumer_) return;
+void DiagnosticEngine::report(DiagnosticLevel level, const std::string& message, SourceLocation loc,
+                              std::shared_ptr<SourceFile> file) {
+  if (!consumer_)
+    return;
 
   // If no file provided but location is valid, try to get from source manager
   if (!file && source_manager_ && source_manager_->get_main_file() && loc.is_valid()) {
@@ -281,8 +282,8 @@ void DiagnosticEngine::fatal(const std::string& message, SourceLocation loc,
   report(DiagnosticLevel::Fatal, message, loc, file);
 }
 
-void DiagnosticEngine::report_at(DiagnosticLevel level, const std::string& message,
-                                 uint32_t line, uint32_t column) {
+void DiagnosticEngine::report_at(DiagnosticLevel level, const std::string& message, uint32_t line,
+                                 uint32_t column) {
   report(level, message, SourceLocation(line, column));
 }
 

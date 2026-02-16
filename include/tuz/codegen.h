@@ -1,7 +1,6 @@
 #pragma once
 
 #include "ast.h"
-#include "diagnostic.h"
 #include "type.h"
 
 #include <llvm/IR/BasicBlock.h>

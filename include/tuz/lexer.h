@@ -37,7 +37,6 @@ private:
   size_t position_;
   uint32_t line_;
   uint32_t column_;
-  // char current_;
 
   void advance();
   void skip_whitespace();

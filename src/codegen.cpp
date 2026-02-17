@@ -1,5 +1,4 @@
 #include "tuz/codegen.h"
-
 #include "tuz/diagnostic.h"
 
 #include <iostream>

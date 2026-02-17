@@ -1,4 +1,5 @@
 #include "tuz/codegen.h"
+
 #include "tuz/diagnostic.h"
 
 #include <iostream>
@@ -762,7 +763,7 @@ void CodeGenerator::compile_to_object(const std::string& filename) {
   }
 
   llvm::legacy::PassManager pass;
-  auto file_type = llvm::CGFT_ObjectFile;
+  auto file_type = llvm::CodeGenFileType::ObjectFile;
 
   if (target_machine->addPassesToEmitFile(pass, dest, nullptr, file_type)) {
     std::cerr << "Target machine can't emit file of this type" << std::endl;

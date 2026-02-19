@@ -17,38 +17,51 @@ tuz is a toy programming language built with LLVM and Kimi, designed to be simpl
 ### Prerequisites
 
 - CMake 3.20+
-- LLVM 14+ (with development libraries)
+- Git
 - C++20 compatible compiler (Clang/GCC)
 - Clang (for linking)
 
-### macOS
+> **Note:** LLVM will be automatically downloaded and built via vcpkg on first run.
+
+### Quick Build (All Platforms)
 
 ```bash
-# Install LLVM (if not already installed)
-brew install llvm
+# Clone the repository
+git clone <repository-url>
+cd tuz
 
-# Set LLVM path
-export LLVM_DIR=$(brew --prefix llvm)/lib/cmake/llvm
-
-# Build
+# Build (automatically bootstraps vcpkg and downloads LLVM)
 mkdir build && cd build
 cmake ..
-make -j
+cmake --build . --parallel
 
-# Or install globally
-sudo make install
+# Run tests
+ctest
+
+# Install (optional)
+sudo cmake --install .
 ```
 
-### Linux (Ubuntu/Debian)
+### What Happens During Build?
 
+1. **vcpkg Bootstrap**: If vcpkg is not found, CMake will automatically clone and bootstrap it
+2. **LLVM Installation**: LLVM will be downloaded and built via vcpkg (this may take a while on first build)
+3. **Project Build**: The compiler itself is built
+
+### Platform-Specific Notes
+
+**macOS**: You may need to install Xcode Command Line Tools:
 ```bash
-# Install LLVM
-sudo apt-get install llvm-dev
+xcode-select --install
+```
 
-# Build
-mkdir build && cd build
-cmake ..
-make -j
+**Linux**: You may need to install build essentials:
+```bash
+# Ubuntu/Debian
+sudo apt-get install build-essential cmake git
+
+# Fedora/RHEL
+sudo dnf install cmake gcc-c++ git
 ```
 
 ## What's Next?

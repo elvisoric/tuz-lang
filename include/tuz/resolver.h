@@ -11,8 +11,6 @@
 
 namespace tuz {
 
-
-
 class Resolver : public ASTVisitorDelux {
 
 private:
@@ -21,9 +19,7 @@ private:
 public:
   Program& program;
 
-  explicit Resolver(Program& program) : program(program) {
-    push_scope();
-  }
+  explicit Resolver(Program& program) : program(program) { push_scope(); }
 
   void push_scope() {
     Scope* parent = current_scope();
@@ -32,16 +28,16 @@ public:
 
   void pop_scope() {
     if (scope_stack.size() <= 1) {
-        throw std::runtime_error("Cannot pop global scope");
+      throw std::runtime_error("Cannot pop global scope");
     }
     scope_stack.pop_back();
   }
 
   Scope* current_scope() {
-      if (scope_stack.empty())
-          return &program.scope;
+    if (scope_stack.empty())
+      return &program.scope;
 
-      return scope_stack.back().get();
+    return scope_stack.back().get();
   }
 
   void resolve();
@@ -77,18 +73,18 @@ public:
 private:
   TypePtr resolve_type(TypePtr type);
   FunctionDecl* resolve_function(std::string_view fn_name);
+
+  void declare_structs();
+  void declare_functions();
 };
 
 class ScopeGuard {
-    Resolver& resolver;
-public:
-    ScopeGuard(Resolver& r) : resolver(r) {
-        resolver.push_scope();
-    }
+  Resolver& resolver;
 
-    ~ScopeGuard() {
-        resolver.pop_scope();
-    }
+public:
+  ScopeGuard(Resolver& r) : resolver(r) { resolver.push_scope(); }
+
+  ~ScopeGuard() { resolver.pop_scope(); }
 };
 
 } // namespace tuz

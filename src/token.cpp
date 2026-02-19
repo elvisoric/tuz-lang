@@ -175,9 +175,7 @@ const char* token_type_to_string(TokenType type) {
 
 std::optional<TokenType> get_keyword_token_type(std::string_view token) {
   auto it = KeywordToTokenTypeMap.find(token);
-  return it != KeywordToTokenTypeMap.end()
-      ? std::optional{it->second}
-      : std::nullopt;
+  return it != KeywordToTokenTypeMap.end() ? std::optional{it->second} : std::nullopt;
 }
 
 } // namespace tuz

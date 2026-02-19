@@ -10,7 +10,10 @@ namespace tuz {
 
 // Forward declarations
 class Type;
+struct Symbol;
+
 using TypePtr = std::shared_ptr<Type>;
+using SymbolPtr = std::shared_ptr<Symbol>;
 
 // Forward declarations for AST nodes
 struct Expr;
@@ -20,6 +23,8 @@ struct Decl;
 using ExprPtr = std::shared_ptr<Expr>;
 using StmtPtr = std::shared_ptr<Stmt>;
 using DeclPtr = std::shared_ptr<Decl>;
+
+template <typename T> using OptionalRef = std::optional<std::reference_wrapper<const T>>;
 
 // =============================================================================
 // Expressions
@@ -72,6 +77,7 @@ struct StringLiteralExpr : Expr {
 
 struct VariableExpr : Expr {
   std::string name;
+  SymbolPtr symbol;
   VariableExpr(std::string n, Location loc) : Expr(ExprKind::Variable, loc), name(std::move(n)) {}
 };
 
@@ -178,6 +184,7 @@ struct LetStmt : Stmt {
   TypePtr declared_type;
   ExprPtr initializer;
   bool is_mutable;
+  SymbolPtr symbol;
   LetStmt(std::string n, TypePtr t, ExprPtr init, bool mut, Location loc)
       : Stmt(StmtKind::Let, loc), name(std::move(n)), declared_type(std::move(t)),
         initializer(std::move(init)), is_mutable(mut) {}
@@ -217,6 +224,7 @@ struct ForStmt : Stmt {
   ExprPtr range_start;
   ExprPtr range_end;
   StmtPtr body;
+  SymbolPtr symbol;
   ForStmt(std::string var, ExprPtr start, ExprPtr end, StmtPtr b, Location loc)
       : Stmt(StmtKind::For, loc), var_name(std::move(var)), range_start(std::move(start)),
         range_end(std::move(end)), body(std::move(b)) {}
@@ -251,6 +259,7 @@ struct Decl {
 struct Param {
   std::string name;
   TypePtr type;
+  SymbolPtr symbol;
   Param(std::string n, TypePtr t) : name(std::move(n)), type(std::move(t)) {}
 };
 
@@ -290,67 +299,80 @@ struct GlobalDecl : Decl {
 // Scope
 // =============================================================================
 
-enum class SymbolKind {
-    Variable,
-    Function,
-    Struct,
-    Field
-};
+enum class SymbolKind { Variable, Function, Struct, Field };
 
 struct Symbol {
-    SymbolKind kind;
-    std::string name;
-    Symbol(SymbolKind k, std::string n): kind(k), name(std::move(n)) {}
-    virtual ~Symbol() = default;
+  SymbolKind kind;
+  std::string name;
+  Symbol(SymbolKind k, std::string n) : kind(k), name(std::move(n)) {}
+  virtual ~Symbol() = default;
 };
 
 struct VariableSymbol : public Symbol {
-    TypePtr type;
-    VariableSymbol(std::string n, TypePtr t)
-        : Symbol(SymbolKind::Variable, std::move(n)), type(std::move(t)) {}
+  TypePtr type;
+  VariableSymbol(std::string n, TypePtr t)
+      : Symbol(SymbolKind::Variable, std::move(n)), type(std::move(t)) {}
 };
 
 struct FunctionSymbol : public Symbol {
-    TypePtr type;
-    FunctionSymbol(std::string n, TypePtr t)
-        : Symbol(SymbolKind::Function, std::move(n)), type(std::move(t)) {}
+  TypePtr type;
+  FunctionSymbol(std::string n, TypePtr t)
+      : Symbol(SymbolKind::Function, std::move(n)), type(std::move(t)) {}
 };
 
 struct StructSymbol : public Symbol {
-    TypePtr type;
-    StructSymbol(std::string name, TypePtr type)
-     : Symbol(SymbolKind::Struct, std::move(name)), type(std::move(type)) {}
+  TypePtr type;
+  StructSymbol(std::string name, TypePtr type)
+      : Symbol(SymbolKind::Struct, std::move(name)), type(std::move(type)) {}
 };
 
 class Scope {
 public:
-    Scope* parent;
+  Scope* parent;
 
-    std::unordered_map<std::string, std::vector<std::shared_ptr<Symbol>>> symbols;
+  std::unordered_map<std::string, std::vector<SymbolPtr>> symbols;
 
-    explicit Scope(Scope* p = nullptr): parent(p) {}
+  explicit Scope(Scope* p = nullptr) : parent(p) {}
 
-    void declare(std::shared_ptr<Symbol> symbol) {
-        symbols[symbol->name].push_back(std::move(symbol));
+  void declare(SymbolPtr symbol) { symbols[symbol->name].push_back(std::move(symbol)); }
+
+  OptionalRef<SymbolPtr> lookup_first(const std::string name) const {
+    if (auto symbols = lookup(name)) {
+      const auto& vec = symbols->get();
+
+      if (!vec.empty())
+        return std::cref(vec.front());
     }
+    return std::nullopt;
+  }
 
-    std::vector<std::shared_ptr<Symbol>>* lookup_local(const std::string& name) {
-        auto it = symbols.find(name);
-        if (it != symbols.end())
-            return &it->second;
-        return nullptr;
-    }
+  OptionalRef<SymbolPtr> lookup_first_local(const std::string name) const {
+    if (auto symbols = lookup_local(name)) {
+      const auto& vec = symbols->get();
 
-    std::vector<std::shared_ptr<Symbol>>* lookup(const std::string& name) {
-        for (Scope* s = this; s != nullptr; s = s->parent) {
-            auto result = s->lookup_local(name);
-            if (result)
-                return result;
-        }
-        return nullptr;
+      if (!vec.empty())
+        return std::cref(vec.front());
     }
+    return std::nullopt;
+  }
+
+  OptionalRef<std::vector<SymbolPtr>> lookup_local(const std::string& name) const {
+    auto it = symbols.find(name);
+    if (it != symbols.end()) {
+      return std::cref(it->second);
+    }
+    return std::nullopt;
+  }
+
+  OptionalRef<std::vector<SymbolPtr>> lookup(const std::string& name) const {
+    for (const Scope* s = this; s != nullptr; s = s->parent) {
+      if (auto result = s->lookup_local(name)) {
+        return result;
+      }
+    }
+    return std::nullopt;
+  }
 };
-
 
 // =============================================================================
 // Program
@@ -398,12 +420,10 @@ public:
   virtual void visit(GlobalDecl& decl) = 0;
 };
 
-
 // Helper functions for visiting
 void visit_expr(ASTVisitor& visitor, Expr& expr);
 void visit_stmt(ASTVisitor& visitor, Stmt& stmt);
 void visit_decl(ASTVisitor& visitor, Decl& decl);
-
 
 class ASTVisitorDelux : public ASTVisitor {
 public:
@@ -422,6 +442,5 @@ public:
       visit_decl(*this, *node);
   }
 };
-
 
 } // namespace tuz

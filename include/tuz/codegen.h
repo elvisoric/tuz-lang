@@ -118,7 +118,7 @@ private:
   llvm::Value* codegen_binary_op(BinaryOp op, llvm::Value* left, llvm::Value* right,
                                  TypePtr result_type);
   llvm::Value* codegen_unary_op(UnaryOp op, llvm::Value* operand, TypePtr result_type);
-  
+
   llvm::Value* codegen_expr_address(Expr& expr);
 
   // Statement code generation

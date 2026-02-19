@@ -1,3 +1,12 @@
 build
 .cache
 /vs
+vcpkg
+vcpkg_installed
+compile_commands.json
+.DS_Store
+*.o
+*.ll
+*.bc
+*.out
+tuzc

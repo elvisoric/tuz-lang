@@ -259,7 +259,7 @@ void Resolver::visit(GlobalDecl& decl) {
 
 TypePtr Resolver::resolve_type(TypePtr type) {
 
-  if (type->kind == TypeKind::TypeName) {
+  if (type && type->kind == TypeKind::TypeName) {
 
     auto* ref = static_cast<TypeName*>(type.get());
     auto symbol_opt = current_scope()->lookup_first(ref->type_name);

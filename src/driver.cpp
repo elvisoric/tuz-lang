@@ -139,8 +139,11 @@ bool Driver::link_object(const std::string& obj_file, const CompileOptions& opti
     cmd += " -l" + lib;
   }
 
-  // Link with standard C library
-  cmd += " -lc";
+  // On windows c library is linked automatically 
+  #ifndef _WIN32
+    // Link with standard C library
+    cmd += " -lc";
+  #endif
 
   if (options.verbose)
     std::cout << "  Command: " << cmd << std::endl;
